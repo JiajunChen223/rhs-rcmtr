@@ -1,0 +1,9 @@
+seed: 0
+real_data_allowed: true
+local_gpu_probe_allowed: false
+execution_scale: innovation_screening_seed0
+test_seal_status: sealed
+evaluation_splits: [train, validation]
+synthetic_only: false
+backbone_mode: official_cloud_hybrid
+output_root: /root/autodl-tmp/deepseekpro_pr/outputs

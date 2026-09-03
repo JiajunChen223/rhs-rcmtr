@@ -1,0 +1,44 @@
+# R6 SAR-DE baseline row (handoff v2 §3): sar_encoder_v2 + gradient balance +
+# distillation pre-training, static fusion (P0R1 mechanism). Frozen 2026-09-02.
+pretrained_initialization: dinov2_b14_plus_croma_base_sar
+data_split: train_validation
+preprocessing: aligned_shared_grid_v1
+augmentation: non_cloud_v1
+sampler: group_disjoint_v1
+micro_batch: 4
+effective_batch: 8
+optimizer: adamw
+learning_rate: 0.0001
+scheduler: cosine
+evaluator: segmentation_v1
+nms: not_applicable_segmentation
+seed: 0
+epochs: 12
+execution_epochs: 12
+scheduler_horizon_epochs: 12
+rapid_screen_horizon_epochs: 6
+common_init_seed: 0
+innovation_init_seed: 1000
+data_order_seed: 0
+augmentation_seed: 0
+gradient_accumulation_steps: 2
+weight_decay: 0.01
+num_workers: 4
+prefetch_factor: 2
+persistent_workers: true
+unimodal_mode: multimodal
+sar_encoder_variant: v2
+sar_grad_scale: 1.0
+loss_graph_signature: segmentation+inject
+loss:
+  segmentation_weight: 1.0
+  honesty_weight: 0.0
+  counterfactual_weight: 0.0
+  auxiliary_sar_weight: 0.0
+  evidence_response_weight: 0.0
+  evidence_ramp_epochs: 0
+  degradation_sampler_version: r6_train_inject_v1
+  degradation_inject_fraction: 0.3
+enabled_mechanism_ids: []
+external_trainable_component: false
+backbone_mode: official_cloud_frozen

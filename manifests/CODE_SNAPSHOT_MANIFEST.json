@@ -1,0 +1,56 @@
+{
+  "artifact_type": "current_code_snapshot_manifest",
+  "code_root": "10_CURRENT/02_experiment/code",
+  "original_clean_sync_sha256": "5bd5f229756d0ad50ff770f0e2ece545279b5bd8c560e8acd7c071f29ee0b528",
+  "formal_run_binding": "r5-c1-oa-scrt-formal-seed0-20260831-r2.manifest.json code_manifest_sha256=5bd5f229...",
+  "equivalent_archive": "20_HISTORY/02_legacy_code_pkgs/R5_era/LATEST_equiv_worktree_5bd5f229.tar.gz",
+  "cleanup_applied": [
+    "19 superseded experiment yamls -> 20_HISTORY/03_rejected_configs/configs",
+    "36 legacy review json -> 20_HISTORY/03_rejected_configs/legacy_code_reviews",
+    "smoke outputs -> 20_HISTORY/03_rejected_configs/smoke_outputs",
+    ".pytest_cache/.ruff_cache -> 20_HISTORY/09_root_scraps/caches/code_caches"
+  ],
+  "current_clean_sync_sha256": "860918aa44cb1d81885a3b3ce14a93760618856b437543c1f04fb1857cac3b7b",
+  "file_count_after_cleanup": 82,
+  "note": "Config-level isolation only: rejected mechanism classes remain in src mechanism library for reproducibility; no accepted-route config references them.",
+  "second_cleanup_20260902_external": {
+    "when": "2026-09-02 ~23:04 (after main reorganization; performed outside this session)",
+    "what": "Rejected mechanism classes removed from code: reliability_router.py 12 classes -> OA-SCRT only; factory.ALLOWED_MECHANISMS -> {R5-C1-OA-SCRT}; 2 audit scripts re-targeted; 6 tests trimmed",
+    "archive": "20_HISTORY/02_legacy_code_pkgs/rejected_mechanisms_20260902/ (rejected_routers_pool.py + 12 .full_original backups)",
+    "scientific_impact": "None: touched files do not alter baseline/formal train or audit numerics; config yamls only gained status comments; OA-SCRT class body verified byte-identical to original snapshot",
+    "verification": "pytest: 79 passed (suite trimmed with mechanisms); original suite was 109 for the 12-class package",
+    "files_touched": [
+      "configs/experiment/baseline.yaml",
+      "configs/experiment/composition.yaml",
+      "configs/experiment/n1_d1_optical_only.yaml",
+      "configs/experiment/n1_d2_sar_only.yaml",
+      "configs/experiment/r5_c1_oa_scrt.yaml",
+      "configs/experiment/r5_c1_oa_scrt_formal.yaml",
+      "scripts/audit_route_behavior.py",
+      "scripts/audit_training_object.py",
+      "src/rhs_rcmtr/mechanisms/reliability_router.py",
+      "src/rhs_rcmtr/models/factory.py",
+      "tests/integration/test_synthetic_graph.py",
+      "tests/unit/test_checkpoint.py",
+      "tests/unit/test_common_initialization.py",
+      "tests/unit/test_interventions.py",
+      "tests/unit/test_model_factory.py",
+      "tests/unit/test_survivor_validation.py",
+      "tests/unit/test_training_object_parity.py"
+    ],
+    "clean_sync_manifest_sha256_after": "4022b1b8534abad167c6d5c6b8eddd10549732cdce977b5e32488047099cbc89"
+  },
+  "r6_sarde_ready_snapshot_20260902": {
+    "clean_sync_manifest_sha256": "94643097325642f2e3eb57cf3da695337600679751f4d40aa001db1294ad1b17",
+    "file_count": 93,
+    "pytest": "108 passed (79 legacy + 29 R6)",
+    "audit": "3-agent cross-audit closed; blocking fixes: legacy row re-runnable, eval-state guard, evidence stats per-epoch, runtime loss-graph delta, distillation anchor chain, training-time injection",
+    "release_package": "10_CURRENT/02_experiment/artifacts/code_release_R6_SAR_DE_v1.tar.gz"
+  },
+  "anchor_binding_update_20260903": {
+    "initialization.yaml": "common_init_anchor -> COMMON_INIT_R6_SEED0.pt (79687881...)",
+    "clean_sync_manifest_sha256": "43919517b143d01bc85279cdb39d0a9963e0137d0791dd45a2e567dcd08bd944"
+  },
+  "audit_script_fix_20260903": "create_distill_pretrain_anchor + audit_sar_competence_v2: pretrained-audit injection and run-manifest signature fixed after cloud-first-run failures",
+  "ablation_20260903": "saronly_ablation.yaml added (no-KL control); audit CLIs finalized"
+}

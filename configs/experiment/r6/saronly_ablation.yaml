@@ -1,0 +1,50 @@
+# R6 ablation control (G1 attribution, 2026-09-03): identical to distill_pretrain except
+# distill_kl_weight=0 (no teacher KL; hard-label SAR-only training). Answers whether
+# the 4.78% SAR-only result is an information ceiling or a distillation-protocol issue.
+# R6 distillation pre-training run (handoff v2 §2-A2, run 1 of the two-run
+# chain). Not a comparison row: no mechanism, no validation loop; produces the
+# pre-training anchor consumed by r6 baseline and R6-C1-EVSCRT.
+pretrained_initialization: dinov2_b14_plus_croma_base_sar
+data_split: train_validation
+preprocessing: aligned_shared_grid_v1
+augmentation: non_cloud_v1
+sampler: group_disjoint_v1
+micro_batch: 4
+effective_batch: 8
+optimizer: adamw
+learning_rate: 0.0001
+scheduler: cosine
+evaluator: segmentation_v1
+nms: not_applicable_segmentation
+seed: 0
+epochs: 6
+execution_epochs: 6
+scheduler_horizon_epochs: 6
+common_init_seed: 0
+innovation_init_seed: 1000
+data_order_seed: 0
+augmentation_seed: 0
+gradient_accumulation_steps: 2
+weight_decay: 0.01
+num_workers: 4
+prefetch_factor: 2
+persistent_workers: true
+unimodal_mode: multimodal
+sar_encoder_variant: v2
+sar_grad_scale: 1.0
+distill_pretrain: true  # ablation: no-KL SAR-only control
+loss_graph_signature: segmentation+distill_abl
+loss:
+  segmentation_weight: 1.0
+  honesty_weight: 0.0
+  counterfactual_weight: 0.0
+  auxiliary_sar_weight: 0.0
+  evidence_response_weight: 0.0
+  degradation_sampler_version: none
+  distill_temperature: 4.0
+  distill_kl_weight: 0.0
+  distill_hard_filter_fraction: 0.05
+  distill_floor_weight: 0.5
+enabled_mechanism_ids: []
+external_trainable_component: false
+backbone_mode: official_cloud_frozen

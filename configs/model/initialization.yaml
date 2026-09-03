@@ -1,0 +1,33 @@
+initialization:
+  mode: pretrained
+  initialization_family: hybrid_pretrained_with_sar_fallback
+  optical_model: dinov2_vitb14
+  optical_repo_path: /root/autodl-tmp/code_dependencies/dinov2
+  optical_checkpoint_path: /root/autodl-tmp/weights/dinov2_vitb14_pretrain.pth
+  sar_model: croma_base_sar_incompatible_single_band_fallback
+  sar_initialization_mode: random_init_single_band
+  sar_repo_path: /root/autodl-tmp/code_dependencies/CROMA
+  sar_checkpoint_path: /root/autodl-tmp/weights/CROMA_base.pt
+  strict_load: true
+  require_compatibility_audit: true
+  audit_report: 02_experiment/reports/pretrained_weight_audit.json
+  target_test_data_used: false
+  optical_input_spec:
+    channels: 3
+    normalization: imagenet_mean_std_to_be_verified_in_cloud_data_audit
+    patch_size: 14
+    patch_alignment: resize_to_nearest_lower_multiple_of_14_inside_dinov2_adapter
+    decoder_output_resolution: restore_native_raster_resolution
+    positional_adaptation: official_dinov2_forward_features
+  sar_input_spec:
+    channels: 1
+    normalization: dataset_uint8_to_float32_with_cloud_proxy_audit
+    image_resolution: native_1024_then_model_grid_alignment
+    positional_adaptation: random_init_single_band_fallback
+  sar_fallback:
+    reason: official_croma_requires_two_sar_backscatter_channels_but_oem_sar_is_single_band
+    trainable: true
+    same_for_baseline_and_innovation: true
+  task_head_replacement: segmentation_decoder_only
+  common_init_anchor_path: /root/autodl-tmp/deepseekpro_pr/metadata_r6/common_init/COMMON_INIT_R6_SEED0.pt
+  common_init_anchor_sha256: "7968788108314fe9493542f0894d12c2ef2854f824c0476bc3006264c43a7d4f"

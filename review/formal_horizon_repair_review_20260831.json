@@ -1,0 +1,23 @@
+{
+  "artifact_type": "researchpilot_code_repair_review",
+  "schema_version": 1,
+  "status": "pass",
+  "repair_id": "R5-C1-FORMAL-HORIZON-REPAIR-20260831",
+  "cause": "Formal launcher selected the rapid OA-SCRT config with execution_epochs=6.",
+  "changes": [
+    "Added configs/runtime/cloud_formal_screening.yaml with execution_scale=innovation_formal_seed0.",
+    "Added configs/experiment/r5_c1_oa_scrt_formal.yaml with epochs=execution_epochs=scheduler_horizon_epochs=12.",
+    "Added a unit test that distinguishes rapid and formal horizons and keeps train/validation-only test sealing."
+  ],
+  "scientific_variables_changed": false,
+  "allowed_configuration_difference": "execution horizon restored from rapid 6 to frozen formal 12",
+  "test_summary": {"passed": 109, "failed": 0, "warnings": 2, "synthetic_only": true},
+  "release_scan": {"status": "pass", "scanned_files": 66, "violations": []},
+  "clean_sync_manifest": "02_experiment/code/manifests/clean_sync_manifest.json",
+  "clean_sync_manifest_sha256": "5bd5f229756d0ad50ff770f0e2ece545279b5bd8c560e8acd7c071f29ee0b528",
+  "clean_sync_file_count": 101,
+  "local_gpu_probe": "forbidden_not_run",
+  "local_real_data_used": false,
+  "test_accessed": false,
+  "unresolved_blockers": []
+}

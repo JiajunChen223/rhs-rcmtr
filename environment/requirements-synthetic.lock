@@ -1,0 +1,5 @@
+numpy==2.4.6
+Pillow==12.2.0
+PyYAML==6.0.3
+pytest==9.0.2
+torch==2.5.1

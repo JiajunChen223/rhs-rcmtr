@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "status": "PASS",
+  "project_root": "F:\\deepseekpro_pr",
+  "code_root": "F:\\deepseekpro_pr\\02_experiment\\code",
+  "reviewed_commit_or_sync_manifest": "02_experiment/code/manifests/clean_sync_manifest.json",
+  "reviewed_sync_manifest_sha256": "5bd5f229756d0ad50ff770f0e2ece545279b5bd8c560e8acd7c071f29ee0b528",
+  "amendment_ref": "00_project/controls/user_amendments.jsonl#AM-20260830-150522-e9cc8cab",
+  "scaffold_report": "02_experiment/code/review/scaffold_report.json",
+  "test_summary": {
+    "status": "pass",
+    "commands": [
+      "F:/anaconda3/envs/dl_env/python.exe -m pytest -q -p no:cacheprovider",
+      "F:/anaconda3/envs/dl_env/python.exe scripts/validate_release.py",
+      "F:/anaconda3/envs/dl_env/python.exe scripts/prepare_clean_sync_manifest.py --verify",
+      "F:/anaconda3/envs/dl_env/python.exe -m py_compile src/rhs_rcmtr/engine/entrypoint.py src/rhs_rcmtr/utils/checkpoint.py src/rhs_rcmtr/utils/initialization_anchor.py src/rhs_rcmtr/utils/data_order.py scripts/create_common_init_anchor.py",
+      "E12 protocol: formal_horizon=12, rapid_horizon=6, best_validation_checkpoint=enabled",
+      "E12 input pipeline: prefetch_factor=2 and persistent_workers=true bound in train/validation DataLoaders",
+      "P0 protocol repair: scheduler horizon, common-init anchor, separated seeds, sample-order hashes, explicit loss config, and parity tests",
+      "P1 reliability proxy scaffold: radiometric usability, local SAR CV/MAD, validation-only audit and degradation ladder"
+    ],
+    "passed": 109,
+    "failed": 0,
+    "synthetic_only": true,
+    "scientific_evidence": false
+  },
+  "review_summary": {
+    "status": "pass",
+    "finding_count": 32,
+    "unresolved_blocker_count": 0,
+    "report": "02_experiment/code/review/code_review_findings.jsonl",
+    "independent_roles": ["architecture", "data_interface", "reproducibility", "release", "adversarial"]
+  },
+  "local_data_status": "clean",
+  "local_data_audit_ref": "02_experiment/reports/local_data_audit.json",
+  "local_gpu_probe": "forbidden_not_run",
+  "pretrained_initializer": "audited_cloud_only",
+  "pretrained_initializer_policy_status": "pass_cloud_audit_recorded",
+  "pretrained_audit_ref": "02_experiment/reports/pretrained_weight_audit_scheme_a.json",
+  "test_seal_guard": "present_and_tested",
+  "training_object_parity": {
+    "status": "pass",
+    "same_detector_factory": true,
+    "single_internal_mechanism_delta": true,
+    "external_trainable_component_forbidden": true,
+    "config_diff_test": "tests/unit/test_training_object_parity.py",
+    "trainable_parameter_audit_test": "02_experiment/code/review/training_object_audit_P0.json"
+  },
+  "coupling_ablation_readiness": {
+    "status": "pass",
+    "enabled_mechanism_set_config": "configs/experiment/composition.yaml plus r5_c1_oa_scrt.yaml, r5_c2_s_align.yaml, r5_c3_ms_hdf.yaml",
+    "same_entry_point_test": "scripts/audit_training_object.py",
+    "matched_protocol_budget_hash": "28dc07b5fedb8539439a39eeb26098a7b97f86f257016e99c860bed524ae106c",
+    "parent_row_config_test": "tests/unit/test_training_object_parity.py"
+  },
+  "release_validation": {
+    "status": "pass",
+    "external_validator_scanned_files": 66,
+    "self_contained_validator_scanned_files": 66,
+    "clean_sync_file_count": 101,
+    "credentials_included": false,
+    "checkpoint_binaries_included": false
+  },
+  "unresolved_issues": [],
+  "amendment_compatibility": "ADAPTED: E12 fixed budget and same-run epoch-6 rapid reference are represented; scheme-A internal split, sealed official SAR-only external evaluation, and no fake SAR channel duplication remain unchanged.",
+  "deferred_cloud_evidence": [
+    "P0 cloud common-init anchor and repaired baseline reproduction",
+    "P1 validation-only reliability audit (new proxy implementation pending cloud execution)",
+    "P2 clean C0-C3 controls and P3/P4 scientific evidence"
+  ],
+  "route_revision": {
+    "selected_route_id": "R5-OA-SCRT",
+    "primary_core_candidate_id": "R5-C1-OA-SCRT",
+    "rapid_candidates": ["R5-C1-OA-SCRT", "R5-C2-S-ALIGN", "R5-C3-MS-HDF"],
+    "e2_config_wiring_repaired": true,
+    "feature_level_modality_mask_implemented": true,
+    "scientific_evidence_started": true,
+    "formal_horizon_repair": {
+      "status": "pass",
+      "runtime_config": "configs/runtime/cloud_formal_screening.yaml",
+      "experiment_config": "configs/experiment/r5_c1_oa_scrt_formal.yaml",
+      "formal_execution_epochs": 12,
+      "rapid_reference_epoch": 6,
+      "review_ref": "02_experiment/code/review/formal_horizon_repair_review_20260831.json"
+    }
+  },
+  "generated_at_utc": "2026-08-31T08:06:00Z"
+}

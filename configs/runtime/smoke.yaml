@@ -1,0 +1,9 @@
+seed: 0
+real_data_allowed: false
+local_gpu_probe_allowed: false
+execution_scale: smoke
+test_seal_status: sealed
+evaluation_splits: [train, validation]
+synthetic_only: true
+backbone_mode: synthetic_fixture
+output_root: outputs/smoke
