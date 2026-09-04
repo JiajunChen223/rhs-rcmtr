@@ -1,7 +1,9 @@
-"""Cloud audit: old DINO optical adapter vs R7 lock-step optical foundation path.
+"""Cloud audit: legacy DINO patch tokens vs R7 lock-step optical foundation path.
 
 This audit requires the real local DINOv2 repository and the hash-bound
-checkpoint.  It never accesses labels or the sealed test split.
+checkpoint. It never accesses labels or the sealed test split. The reference is
+read from the legacy adapter's frozen DINO model directly so rectangular patch
+grids are audited without the legacy wrapper's square-grid reshape assumption.
 """
 
 from __future__ import annotations
@@ -13,7 +15,7 @@ from pathlib import Path
 
 import torch
 
-from rhs_rcmtr.models.backbones import DinoV2B14Adapter
+from rhs_rcmtr.models.backbones import DinoV2B14Adapter, dino_input_grid
 from rhs_rcmtr.models.s2ft import S2FTConfig, SharedDinoSensorBackbone
 
 
@@ -40,7 +42,7 @@ def main() -> None:
         raise ValueError("audit image dimensions must be at least one DINO patch")
 
     torch.manual_seed(args.seed)
-    old = DinoV2B14Adapter(args.dino_repo, args.checkpoint, args.checkpoint_sha256).eval()
+    legacy = DinoV2B14Adapter(args.dino_repo, args.checkpoint, args.checkpoint_sha256).eval()
     config = S2FTConfig()
     new = SharedDinoSensorBackbone.from_official(
         args.dino_repo, args.checkpoint, args.checkpoint_sha256, config
@@ -51,7 +53,12 @@ def main() -> None:
     sar_off = torch.tensor([[1.0, 0.0], [1.0, 0.0]], dtype=torch.float32)
 
     with torch.no_grad():
-        expected = old(optical)
+        aligned = dino_input_grid(optical, 14)
+        reference_tokens = legacy.model.forward_features(aligned)["x_norm_patchtokens"]
+        grid = (aligned.shape[-2] // 14, aligned.shape[-1] // 14)
+        expected = reference_tokens.transpose(1, 2).reshape(
+            reference_tokens.shape[0], reference_tokens.shape[2], *grid
+        )
         optical_features, sar_features, _sar, _om, _sm = new(optical, sar, sar_off)
         observed = optical_features[max(config.adapter_layers)]
 
@@ -68,6 +75,7 @@ def main() -> None:
         "status": status,
         "seed": args.seed,
         "checkpoint_sha256": actual_sha,
+        "aligned_grid": list(grid),
         "old_shape": list(expected.shape),
         "new_shape": list(observed.shape),
         "max_abs_error": max_abs,
