@@ -20,7 +20,7 @@ jobs:
           cache: 'pip'
       - name: Static compile
         run: python -m compileall -q src tests
-      - name: Install project
-        run: python -m pip install --upgrade pip && python -m pip install -e .
+      - name: Install project and test runner
+        run: python -m pip install --upgrade pip && python -m pip install -e . && python -m pip install pytest
       - name: Run tests
-        run: pytest -q
+        run: python -m pytest -q
