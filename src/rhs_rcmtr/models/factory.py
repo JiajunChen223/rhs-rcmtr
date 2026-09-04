@@ -14,13 +14,18 @@ from rhs_rcmtr.models.backbones import (
     RandomSarSingleBandAdapter,
     SarEncoderV2,
 )
-from rhs_rcmtr.models.s2ft import S2FTConfig, S2FTSegmenter
+from rhs_rcmtr.models.s2ft import (
+    R7_S2FT_VARIANTS,
+    S2FTConfig,
+    S2FTSegmenter,
+    s2ft_config_for_variant,
+)
 from rhs_rcmtr.mechanisms.reliability_router import EvScrtRouter, OpticalAnchoredSarResidualRouter
 
 
-# R7-S2FT is an architecture-level internal delta, not a router.  Historical
+# R7 rows are architecture-level internal deltas, not routers. Historical
 # R5/R6 mechanisms remain available unchanged for frozen re-runs.
-ALLOWED_MECHANISMS = frozenset({"R5-C1-OA-SCRT", "R6-C1-EVSCRT", "R7-S2FT"})
+ALLOWED_MECHANISMS = frozenset({"R5-C1-OA-SCRT", "R6-C1-EVSCRT"}) | R7_S2FT_VARIANTS
 
 
 @dataclass(frozen=True)
@@ -63,14 +68,15 @@ class MultimodalSegmenter(nn.Module):
         self.innovation: nn.Module | None = None
         self.sar_auxiliary_decoder: nn.Module | None = None
 
-        if mechanism_id == "R7-S2FT":
+        if mechanism_id in R7_S2FT_VARIANTS:
             if config.optical_channels != 3 or config.sar_channels != 1:
                 raise ValueError("R7-S2FT requires three optical channels and exactly one SAR channel")
             if config.auxiliary_sar_head:
                 raise ValueError("R7-S2FT v1 does not use the legacy SAR auxiliary head")
+            variant_config = s2ft_config_for_variant(mechanism_id, config.s2ft)
             if config.backbone_mode == "synthetic_fixture":
                 self.innovation = S2FTSegmenter.synthetic(
-                    config=config.s2ft,
+                    config=variant_config,
                     num_classes=config.num_classes,
                     unimodal_mode=config.unimodal_mode,
                 )
@@ -79,7 +85,7 @@ class MultimodalSegmenter(nn.Module):
                     repo_path=Path(config.optical_repo_path),
                     checkpoint_path=Path(config.optical_checkpoint_path),
                     expected_sha256=config.optical_checkpoint_sha256,
-                    config=config.s2ft,
+                    config=variant_config,
                     num_classes=config.num_classes,
                     unimodal_mode=config.unimodal_mode,
                 )
