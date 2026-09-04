@@ -13,14 +13,15 @@ from torch import nn
 
 ANCHOR_SCHEMA = "common-init-anchor-v1"
 UNANCHORED_SUPPORT_PREFIXES = ("sar_auxiliary_decoder.", "auxiliary_head.")
+INNOVATION_PREFIXES = ("router.", "innovation.")
 
 
 def _is_common_trainable(name: str, parameter: nn.Parameter) -> bool:
-    return bool(parameter.requires_grad) and not name.startswith("router.")
+    return bool(parameter.requires_grad) and not name.startswith(INNOVATION_PREFIXES)
 
 
 def common_parameter_state(model: nn.Module) -> dict[str, torch.Tensor]:
-    """Return cloned CPU tensors for all non-mechanism trainable parameters."""
+    """Return cloned CPU tensors for all non-innovation trainable parameters."""
 
     return {
         name: parameter.detach().cpu().clone()
@@ -98,7 +99,13 @@ def load_common_init_anchor(
     model: nn.Module,
     expected_common_init_seed: int | None = None,
 ) -> dict[str, Any]:
-    """Load an anchor and require exact common names/shapes before copying."""
+    """Load an anchor and require exact active common names/shapes before copying.
+
+    Architecture-level innovations may have no trainable parameters in common
+    with the parent row.  In that case the immutable anchor still binds the run
+    to the parent protocol, while all ``innovation.*`` tensors are seeded by the
+    dedicated innovation RNG and excluded from the copied common state.
+    """
 
     actual = hashlib.sha256(path.read_bytes()).hexdigest()
     if actual != expected_sha256:
@@ -119,10 +126,6 @@ def load_common_init_anchor(
     expected = common_parameter_state(model)
     expected_names = set(expected)
     actual_names = set(state)
-    # A unimodal diagnostic freezes one encoder branch.  The baseline anchor
-    # legitimately contains that branch's trainable tensors, while the
-    # diagnostic needs only the active trainable subset.  Require every active
-    # name to be present, but allow anchor-only names to remain unused.
     missing = sorted(expected_names - actual_names)
     unsupported_missing = [
         name for name in missing
@@ -162,8 +165,17 @@ def load_common_init_anchor(
 
 
 def reset_innovation_parameters(model: nn.Module, innovation_init_seed: int) -> None:
-    """Reset only the internal mechanism under its dedicated RNG stream."""
+    """Reset only the declared internal innovation under its dedicated RNG stream."""
 
+    innovation = getattr(model, "innovation", None)
+    if innovation is not None:
+        reset = getattr(innovation, "reset_innovation_parameters", None)
+        if not callable(reset):
+            raise ValueError("architecture innovation does not expose a safe reset_innovation_parameters method")
+        with torch.random.fork_rng(devices=[]):
+            torch.manual_seed(int(innovation_init_seed))
+            reset()
+        return
     router = getattr(model, "router", None)
     if router is None:
         return
