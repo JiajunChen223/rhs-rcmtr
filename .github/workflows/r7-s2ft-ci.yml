@@ -8,6 +8,10 @@ on:
     branches:
       - main
 
+concurrency:
+  group: r7-s2ft-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -19,7 +23,7 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
       - name: Static compile
-        run: python -m compileall -q src tests
+        run: python -m compileall -q src tests scripts
       - name: Install project and test runner
         run: python -m pip install --upgrade pip && python -m pip install -e . && python -m pip install pytest
       - name: Run tests
