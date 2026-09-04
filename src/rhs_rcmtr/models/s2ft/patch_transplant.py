@@ -11,9 +11,9 @@ from torch import Tensor, nn
 class SarFoundationPatchEmbed(nn.Module):
     """DINO-compatible one-band patch embed initialized from RGB patch filters.
 
-    The RGB filters are collapsed with 1/sqrt(3) scaling.  This preserves filter
-    energy when the three source-channel kernels are identical and avoids the
-    amplitude shrinkage produced by a plain channel mean.
+    The RGB filters are collapsed with 1/sqrt(3) scaling.  Source tensors are
+    retained only as non-persistent buffers so the shared DINO module is never
+    registered a second time in the candidate state dict.
     """
 
     def __init__(self, source_patch_embed: nn.Module) -> None:
@@ -23,7 +23,6 @@ class SarFoundationPatchEmbed(nn.Module):
             raise TypeError("source patch embedding must expose a Conv2d .proj")
         if source_proj.in_channels != 3:
             raise ValueError("R7-S2FT v1 expects a three-channel optical patch embedding")
-        self.source_patch_embed = source_patch_embed
         self.proj = nn.Conv2d(
             1,
             source_proj.out_channels,
@@ -34,6 +33,19 @@ class SarFoundationPatchEmbed(nn.Module):
             groups=1,
             bias=source_proj.bias is not None,
         )
+        self.register_buffer(
+            "_source_weight",
+            source_proj.weight.detach().cpu().clone(),
+            persistent=False,
+        )
+        if source_proj.bias is None:
+            self._source_bias = None
+        else:
+            self.register_buffer(
+                "_source_bias",
+                source_proj.bias.detach().cpu().clone(),
+                persistent=False,
+            )
         source_norm = getattr(source_patch_embed, "norm", nn.Identity())
         if isinstance(source_norm, nn.LayerNorm):
             self.norm: nn.Module = nn.LayerNorm(source_norm.normalized_shape, eps=source_norm.eps)
@@ -52,12 +64,13 @@ class SarFoundationPatchEmbed(nn.Module):
         return int(value[0]), int(value[1])
 
     def reset_from_source(self) -> None:
-        source_proj = getattr(self.source_patch_embed, "proj")
         with torch.no_grad():
-            collapsed = source_proj.weight.detach().sum(dim=1, keepdim=True) / math.sqrt(3.0)
+            source_weight = self._source_weight.to(device=self.proj.weight.device, dtype=self.proj.weight.dtype)
+            collapsed = source_weight.sum(dim=1, keepdim=True) / math.sqrt(3.0)
             self.proj.weight.copy_(collapsed)
-            if source_proj.bias is not None and self.proj.bias is not None:
-                self.proj.bias.copy_(source_proj.bias.detach())
+            source_bias = getattr(self, "_source_bias", None)
+            if source_bias is not None and self.proj.bias is not None:
+                self.proj.bias.copy_(source_bias.to(device=self.proj.bias.device, dtype=self.proj.bias.dtype))
 
     def forward(self, sar: Tensor) -> Tensor:
         if sar.ndim != 4 or sar.shape[1] != 1:
