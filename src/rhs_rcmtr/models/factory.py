@@ -14,14 +14,13 @@ from rhs_rcmtr.models.backbones import (
     RandomSarSingleBandAdapter,
     SarEncoderV2,
 )
+from rhs_rcmtr.models.s2ft import S2FTConfig, S2FTSegmenter
 from rhs_rcmtr.mechanisms.reliability_router import EvScrtRouter, OpticalAnchoredSarResidualRouter
 
 
-# Two-zone cleanup 2026-09-02: rejected mechanism ids (content_router, rhs_router,
-# fast-01/02/06, r2-01/02/03, esr, esr_crm, a4r, R5-C2-S-ALIGN, R5-C3-MS-HDF) were
-# removed; their classes are archived in
-# 20_HISTORY/02_legacy_code_pkgs/rejected_mechanisms_20260902/rejected_routers_pool.py.
-ALLOWED_MECHANISMS = frozenset({"R5-C1-OA-SCRT", "R6-C1-EVSCRT"})
+# R7-S2FT is an architecture-level internal delta, not a router.  Historical
+# R5/R6 mechanisms remain available unchanged for frozen re-runs.
+ALLOWED_MECHANISMS = frozenset({"R5-C1-OA-SCRT", "R6-C1-EVSCRT", "R7-S2FT"})
 
 
 @dataclass(frozen=True)
@@ -43,19 +42,51 @@ class ModelConfig:
     image_resolution: int = 112
     unimodal_mode: str = "multimodal"
     auxiliary_sar_head: bool = False
+    s2ft: S2FTConfig = S2FTConfig()
 
 
 class MultimodalSegmenter(nn.Module):
-    """Small common training object used by every experimental row."""
+    """Common training object used by every experimental row."""
 
     def __init__(self, config: ModelConfig) -> None:
         super().__init__()
         unknown = set(config.enabled_mechanism_ids) - ALLOWED_MECHANISMS
         if unknown:
             raise ValueError(f"undeclared mechanism(s): {sorted(unknown)}")
+        if len(config.enabled_mechanism_ids) > 1:
+            raise ValueError("the training object supports at most one internal mechanism")
         self.config = config
         if config.unimodal_mode not in {"multimodal", "optical_only", "sar_only"}:
             raise ValueError(f"unsupported unimodal_mode: {config.unimodal_mode}")
+        mechanism_id = config.enabled_mechanism_ids[0] if config.enabled_mechanism_ids else ""
+        self.router: nn.Module | None = None
+        self.innovation: nn.Module | None = None
+        self.sar_auxiliary_decoder: nn.Module | None = None
+
+        if mechanism_id == "R7-S2FT":
+            if config.optical_channels != 3 or config.sar_channels != 1:
+                raise ValueError("R7-S2FT requires three optical channels and exactly one SAR channel")
+            if config.auxiliary_sar_head:
+                raise ValueError("R7-S2FT v1 does not use the legacy SAR auxiliary head")
+            if config.backbone_mode == "synthetic_fixture":
+                self.innovation = S2FTSegmenter.synthetic(
+                    config=config.s2ft,
+                    num_classes=config.num_classes,
+                    unimodal_mode=config.unimodal_mode,
+                )
+            elif config.backbone_mode in {"official_cloud_frozen", "official_cloud_hybrid"}:
+                self.innovation = S2FTSegmenter.official(
+                    repo_path=Path(config.optical_repo_path),
+                    checkpoint_path=Path(config.optical_checkpoint_path),
+                    expected_sha256=config.optical_checkpoint_sha256,
+                    config=config.s2ft,
+                    num_classes=config.num_classes,
+                    unimodal_mode=config.unimodal_mode,
+                )
+            else:
+                raise ValueError(f"unsupported backbone_mode for R7-S2FT: {config.backbone_mode}")
+            return
+
         h = config.hidden_channels
         if config.backbone_mode == "synthetic_fixture":
             self.optical_encoder = nn.Sequential(nn.Conv2d(config.optical_channels, h, 3, padding=1), nn.GELU())
@@ -91,13 +122,10 @@ class MultimodalSegmenter(nn.Module):
             self.sar_projection = nn.Conv2d(self.sar_encoder.output_channels, h, 1)
         else:
             raise ValueError(f"unsupported backbone_mode: {config.backbone_mode}")
-        mechanism_id = config.enabled_mechanism_ids[0] if config.enabled_mechanism_ids else ""
         if mechanism_id == "R5-C1-OA-SCRT":
             self.router = OpticalAnchoredSarResidualRouter(h)
         elif mechanism_id == "R6-C1-EVSCRT":
             self.router = EvScrtRouter(h)
-        else:
-            self.router = None
         self.decoder = nn.Sequential(nn.Conv2d(h, h, 3, padding=1), nn.GELU(), nn.Conv2d(h, config.num_classes, 1))
         self.sar_auxiliary_decoder = (
             nn.Sequential(nn.Conv2d(h, h, 3, padding=1), nn.GELU(), nn.Conv2d(h, config.num_classes, 1))
@@ -114,7 +142,9 @@ class MultimodalSegmenter(nn.Module):
     def forward(
         self, optical: Tensor, sar: Tensor, reliability: Tensor,
         modality_mask: Tensor | None = None,
-    ) -> dict[str, Tensor]:
+    ) -> dict[str, Tensor | str]:
+        if self.innovation is not None:
+            return self.innovation(optical, sar, reliability, modality_mask=modality_mask)  # type: ignore[operator]
         if self.config.unimodal_mode == "optical_only":
             optical_features = self.optical_projection(self.optical_encoder(optical))
             fused = optical_features
@@ -129,7 +159,7 @@ class MultimodalSegmenter(nn.Module):
                 logits = torch.nn.functional.interpolate(logits, size=optical.shape[2:], mode="bilinear", align_corners=False)
             if weights.shape[2:] != optical.shape[2:]:
                 weights = torch.nn.functional.interpolate(weights, size=optical.shape[2:], mode="bilinear", align_corners=False)
-            output = {"logits": logits, "route_weights": weights}
+            output: dict[str, Tensor | str] = {"logits": logits, "route_weights": weights}
             if self.training and self.sar_auxiliary_decoder is not None:
                 output["sar_auxiliary_logits"] = self.sar_auxiliary_decoder(optical_features)
             return output
@@ -208,8 +238,10 @@ class MultimodalSegmenter(nn.Module):
             output["sar_auxiliary_logits"] = auxiliary
         return output
 
-    def forward_sar_only(self, sar: Tensor) -> dict[str, Tensor]:
+    def forward_sar_only(self, sar: Tensor) -> dict[str, Tensor | str]:
         """Run the explicitly declared external SAR-only evaluation path."""
+        if self.innovation is not None:
+            return self.innovation.forward_sar_only(sar)  # type: ignore[union-attr]
         sar_features = self.sar_projection(self.sar_encoder(sar))
         logits = self.decoder(sar_features)
         if logits.shape[2:] != sar.shape[2:]:
