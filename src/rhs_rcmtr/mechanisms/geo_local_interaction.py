@@ -79,7 +79,7 @@ class _GeoLocalDirection(nn.Module):
         return self.max_offset_tokens * torch.tanh(raw)
 
     def _sample(self, feature: Tensor, offsets: Tensor) -> Tensor:
-        """Return [B,K,C,H,W] samples from a local 3x3 deformable stencil."""
+        """Return [B,K,C,H,W] local samples without K-fold feature replication."""
         b, c, h, w = feature.shape
         if offsets.shape != (b, self.num_points, 2, h, w):
             raise ValueError("offset tensor shape mismatch")
@@ -102,14 +102,18 @@ class _GeoLocalDirection(nn.Module):
             y = 2.0 * y / float(h - 1) - 1.0
         else:
             y = torch.zeros_like(y)
-        grid = torch.stack((x, y), dim=-1).reshape(b * self.num_points, h, w, 2)
-        tiled = feature[:, None].expand(-1, self.num_points, -1, -1, -1).reshape(
-            b * self.num_points, c, h, w
+        coords = torch.stack((x, y), dim=-1)
+        # grid_sample supports an arbitrary output grid. Pack K local samples
+        # along the output-width dimension so the source feature is read once,
+        # rather than materializing B*K copies of it.
+        grid = coords.permute(0, 2, 1, 3, 4).reshape(
+            b, h, self.num_points * w, 2
         )
         sampled = F.grid_sample(
-            tiled, grid, mode="bilinear", padding_mode="zeros", align_corners=True,
+            feature, grid, mode="bilinear", padding_mode="zeros", align_corners=True,
         )
-        return sampled.reshape(b, self.num_points, c, h, w)
+        sampled = sampled.reshape(b, c, h, self.num_points, w)
+        return sampled.permute(0, 3, 1, 2, 4).contiguous()
 
     def forward(
         self,
