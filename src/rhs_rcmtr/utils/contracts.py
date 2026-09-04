@@ -9,11 +9,6 @@ from typing import Any
 from rhs_rcmtr.utils.loss_graph import assert_single_loss_graph_delta, loss_graph_signature
 
 
-# R6 SAR-DE (handoff v2): public training-object fields shared by both arms.
-# These enter parity/comparisons but are NOT required keys of legacy rows: the
-# historical frozen configs (baseline.yaml etc.) predate them, and requiring
-# their presence would break re-runs of the frozen R5 chain. Missing keys on a
-# legacy row behave as their semantic defaults (v1 / 1.0).
 COMMON_FIELDS = (
     "pretrained_initialization", "data_split", "preprocessing", "augmentation",
     "sampler", "micro_batch", "effective_batch", "optimizer", "learning_rate",
@@ -23,15 +18,10 @@ COMMON_FIELDS = (
     "common_init_seed", "innovation_init_seed", "data_order_seed", "augmentation_seed",
     "sar_encoder_variant", "sar_grad_scale",
 )
-# New keys that legacy (frozen) rows are allowed to omit; they default to the
-# R5 semantic no-op values. Only enforced as \"present\" for new rows.
 OPTIONAL_COMMON_FIELDS = frozenset({"sar_encoder_variant", "sar_grad_scale"})
+INNOVATION_PREFIXES = ("router.", "innovation.")
 
-# R6 SAR-DE claim-alignment registry (CLAM). Each mechanism-level claim of the
-# frozen spec (plan_revision_20260902/innovation_route_handoff_v2_SAR_DE_v1.0.md)
-# must resolve to a code anchor, a unit test, and an audit output field. The
-# `test_claim_alignment.py` CI guard iterates this table; a dangling entry fails
-# the pipeline. This is the enforcement mechanism against claim-vs-impl gaps.
+
 CLAIM_ALIGNMENT_TABLE: tuple[dict[str, str], ...] = (
     {"claim_id": "A1-1", "claim": "SarEncoderV2 accepts exactly one SAR band",
      "impl_anchor": "rhs_rcmtr.models.backbones:SarEncoderV2.forward", "unit_test": "test_sar_encoder_v2_input_validation",
@@ -87,12 +77,38 @@ CLAIM_ALIGNMENT_TABLE: tuple[dict[str, str], ...] = (
     {"claim_id": "B1-4", "claim": "CRM monotonicity loss is trivial under analytic sigmoid weights (never cited as evidence)",
      "impl_anchor": "rhs_rcmtr.mechanisms.reliability_router:EvScrtRouter.forward", "unit_test": "test_crm_monotonicity_trivial_on_analytic_weights",
      "audit_field": "mechanism_diagnostics"},
+    {"claim_id": "R7-A1", "claim": "S2FT consumes exactly one raw SAR band",
+     "impl_anchor": "rhs_rcmtr.models.s2ft.patch_transplant:SarFoundationPatchEmbed.forward", "unit_test": "test_s2ft_single_band_patch_transplant",
+     "audit_field": "r7_audit.sar_input_bands"},
+    {"claim_id": "R7-A2", "claim": "SAR patch filters are initialized by energy-preserving collapse of DINO RGB filters",
+     "impl_anchor": "rhs_rcmtr.models.s2ft.patch_transplant:SarFoundationPatchEmbed.reset_from_source", "unit_test": "test_s2ft_patch_transplant_energy_preserving",
+     "audit_field": "r7_audit.patch_transplant"},
+    {"claim_id": "R7-A3", "claim": "The DINO transformer is shared and frozen while gradients pass through it to trainable adapters",
+     "impl_anchor": "rhs_rcmtr.models.s2ft.shared_foundation:SharedDinoSensorBackbone", "unit_test": "test_s2ft_frozen_foundation_allows_adapter_gradient",
+     "audit_field": "r7_audit.foundation"},
+    {"claim_id": "R7-A4", "claim": "Sensor adapters have exact identity initialization",
+     "impl_anchor": "rhs_rcmtr.models.s2ft.sensor_adapter:SensorAdapter", "unit_test": "test_s2ft_adapter_identity_init",
+     "audit_field": "r7_audit.adapter_identity"},
+    {"claim_id": "R7-B1", "claim": "GLCI is bidirectional, geo-local, and uses bounded deformable offsets",
+     "impl_anchor": "rhs_rcmtr.mechanisms.geo_local_interaction:GeoLocalDeformableCrossInteraction", "unit_test": "test_s2ft_glci_identity_and_bounded_offsets",
+     "audit_field": "r7_audit.glci"},
+    {"claim_id": "R7-B2", "claim": "GLCI starts as an exact identity through zero residual scales",
+     "impl_anchor": "rhs_rcmtr.mechanisms.geo_local_interaction:GeoLocalDeformableCrossInteraction.forward", "unit_test": "test_s2ft_glci_identity_and_bounded_offsets",
+     "audit_field": "r7_audit.glci_identity"},
+    {"claim_id": "R7-C1", "claim": "SAR structural refinement is semantic-conditioned and identity initialized",
+     "impl_anchor": "rhs_rcmtr.mechanisms.structural_refinement:SarStructuralRefinement", "unit_test": "test_s2ft_sdr_identity_init",
+     "audit_field": "r7_audit.sdr"},
+    {"claim_id": "R7-P1", "claim": "R7 logits are independent of legacy reliability evidence",
+     "impl_anchor": "rhs_rcmtr.models.s2ft.model:S2FTSegmenter.forward", "unit_test": "test_s2ft_reliability_is_not_a_model_input",
+     "audit_field": "r7_audit.reliability_independence"},
+    {"claim_id": "R7-P2", "claim": "Explicit modality masking prevents foundation-token leakage from an absent modality",
+     "impl_anchor": "rhs_rcmtr.models.s2ft.shared_foundation:SharedDinoSensorBackbone.forward", "unit_test": "test_s2ft_modality_mask_has_no_feature_leakage",
+     "audit_field": "r7_audit.modality_mask"},
+    {"claim_id": "R7-P3", "claim": "Innovation reset never resets the shared frozen foundation",
+     "impl_anchor": "rhs_rcmtr.utils.initialization_anchor:reset_innovation_parameters", "unit_test": "test_s2ft_innovation_reset_preserves_foundation",
+     "audit_field": "r7_audit.innovation_reset"},
 )
 
-# These fields are not part of the fixed optimization/split budget, but they
-# change the training object and therefore must be explicitly audited when a
-# candidate is compared with its declared parent.  Legacy rows use the
-# defaults below so their historical records remain readable.
 EXTENDED_PARITY_FIELDS = (
     "modality_dropout_policy",
     "auxiliary_head_presence",
@@ -110,19 +126,22 @@ EXTENDED_PARITY_DEFAULTS = {
 
 
 def trainable_parameter_audit(model: Any) -> dict[str, Any]:
-    """Emit stable trainability evidence split into common and mechanism parameters."""
+    """Emit stable trainability evidence split into common and innovation parameters."""
     entries = [{"name": name, "requires_grad": parameter.requires_grad, "numel": parameter.numel()}
                for name, parameter in model.named_parameters()]
-    common = [item for item in entries if not item["name"].startswith("router.")]
-    mechanism = [item for item in entries if item["name"].startswith("router.")]
+    common = [item for item in entries if not item["name"].startswith(INNOVATION_PREFIXES)]
+    innovation = [item for item in entries if item["name"].startswith(INNOVATION_PREFIXES)]
     payload = json.dumps(entries, sort_keys=True, separators=(",", ":")).encode()
+    innovation_trainable = [item["name"] for item in innovation if item["requires_grad"]]
     return {
         "status": "pass",
         "all_parameter_mask_sha256": hashlib.sha256(payload).hexdigest(),
         "common_trainable_names": [item["name"] for item in common if item["requires_grad"]],
         "common_frozen_names": [item["name"] for item in common if not item["requires_grad"]],
-        "mechanism_trainable_names": [item["name"] for item in mechanism if item["requires_grad"]],
+        "mechanism_trainable_names": innovation_trainable,
+        "innovation_trainable_names": innovation_trainable,
         "trainable_numel": sum(item["numel"] for item in entries if item["requires_grad"]),
+        "innovation_trainable_numel": sum(item["numel"] for item in innovation if item["requires_grad"]),
         "total_numel": sum(item["numel"] for item in entries),
     }
 
@@ -139,8 +158,6 @@ def assert_training_object_parity(baseline: dict[str, Any], candidate: dict[str,
 
 
 def extended_training_object_payload(config: dict[str, Any]) -> dict[str, Any]:
-    """Return explicit architecture/augmentation fields for strict audits."""
-
     loss = config.get("loss") if isinstance(config.get("loss"), dict) else {}
     payload: dict[str, Any] = {}
     for field, default in EXTENDED_PARITY_DEFAULTS.items():
@@ -154,8 +171,6 @@ def extended_training_object_payload(config: dict[str, Any]) -> dict[str, Any]:
 def assert_extended_training_object_parity(
     parent: dict[str, Any], child: dict[str, Any], allowed_fields: set[str] | None = None
 ) -> None:
-    """Fail closed when compatibility/augmentation fields change unexpectedly."""
-
     allowed = set(allowed_fields or set())
     left = extended_training_object_payload(parent)
     right = extended_training_object_payload(child)
@@ -168,7 +183,6 @@ def assert_extended_training_object_parity(
 
 
 def assert_composition_row(baseline: dict[str, Any], composition: dict[str, Any]) -> None:
-    """Require an attributable parent and only the declared internal mechanism delta."""
     assert_training_object_parity(baseline, composition)
     if composition.get("parent_row") != "baseline":
         raise ValueError("composition parent_row must be baseline")
@@ -182,7 +196,6 @@ def assert_composition_row(baseline: dict[str, Any], composition: dict[str, Any]
 
 
 def assert_training_row_declared(row: dict[str, Any]) -> None:
-    """Fail closed when a run row omits or changes protected training fields."""
     if row.get("external_trainable_component", False):
         raise ValueError("external trainable components are forbidden")
     enabled = row.get("enabled_mechanism_ids", [])
@@ -196,31 +209,18 @@ def assert_training_row_declared(row: dict[str, Any]) -> None:
 
 
 def matched_protocol_budget_hash(config: dict[str, Any]) -> str:
-    """Hash the frozen budget fields with semantic defaults for missing keys.
-
-    Optional new keys default to their no-op values (v1 / 1.0) so that legacy
-    rows hash consistently with their recorded values; note that hashes computed
-    by pre-R6 code (before these keys existed) are not recomputable and are
-    treated as frozen historical records.
-    """
     defaults = {"sar_encoder_variant": "v1", "sar_grad_scale": 1.0}
-    payload = {
-        key: config.get(key, defaults.get(key)) for key in COMMON_FIELDS
-    }
+    payload = {key: config.get(key, defaults.get(key)) for key in COMMON_FIELDS}
     return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
 def assert_loss_graph_delta(
     parent: dict[str, Any], child: dict[str, Any], allowed_fields: set[str]
 ) -> None:
-    """Validate that objective/intervention changes are exactly declared."""
-
     assert_single_loss_graph_delta(parent, child, allowed_fields)
 
 
 def loss_graph_evidence(config: dict[str, Any]) -> dict[str, Any]:
-    """Return a stable loss-graph record for run manifests and parity audits."""
-
     payload = extended_training_object_payload(config)
     return {
         "signature": loss_graph_signature(config),
