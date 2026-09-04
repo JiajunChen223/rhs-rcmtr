@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+import torch
 from torch import Tensor, nn
 
 from rhs_rcmtr.mechanisms.structural_refinement import SarStructuralRefinement
@@ -20,7 +21,7 @@ class _StageFusion(nn.Module):
     def forward(self, optical: Tensor, sar: Tensor) -> Tensor:
         if optical.shape != sar.shape:
             raise ValueError("stage optical/SAR features must have identical shapes")
-        return self.projection(__import__("torch").cat((optical, sar), dim=1))
+        return self.projection(torch.cat((optical, sar), dim=1))
 
 
 class S2FTDecoder(nn.Module):
