@@ -25,7 +25,9 @@ class _GeoLocalDirection(nn.Module):
         self.q_proj = nn.Conv2d(channels, interaction_dim, 1, bias=False)
         self.k_proj = nn.Conv2d(channels, interaction_dim, 1, bias=False)
         self.v_proj = nn.Conv2d(channels, interaction_dim, 1, bias=False)
-        self.offset = nn.Conv2d(channels * 2, self.num_points * 2, 3, padding=1)
+        self.offset_reduce = nn.Conv2d(channels * 2, interaction_dim, 1)
+        self.offset_act = nn.GELU()
+        self.offset = nn.Conv2d(interaction_dim, self.num_points * 2, 3, padding=1)
         self.out_proj = nn.Conv2d(interaction_dim, channels, 1, bias=False)
         self.relative_bias = nn.Parameter(torch.zeros(self.num_points))
         self.gamma = nn.Parameter(torch.tensor(0.0))
@@ -47,6 +49,7 @@ class _GeoLocalDirection(nn.Module):
         self.q_proj.reset_parameters()
         self.k_proj.reset_parameters()
         self.v_proj.reset_parameters()
+        self.offset_reduce.reset_parameters()
         self.out_proj.reset_parameters()
         nn.init.zeros_(self.offset.weight)
         nn.init.zeros_(self.offset.bias)
@@ -69,7 +72,8 @@ class _GeoLocalDirection(nn.Module):
         return mask
 
     def bounded_offsets(self, target: Tensor, source: Tensor) -> Tensor:
-        raw = self.offset(torch.cat((target, source), dim=1))
+        hidden = self.offset_act(self.offset_reduce(torch.cat((target, source), dim=1)))
+        raw = self.offset(hidden)
         b, _, h, w = raw.shape
         raw = raw.view(b, self.num_points, 2, h, w)
         return self.max_offset_tokens * torch.tanh(raw)
