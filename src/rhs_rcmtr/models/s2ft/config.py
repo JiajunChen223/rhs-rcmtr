@@ -2,7 +2,17 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+
+
+R7_S2FT_VARIANTS = frozenset(
+    {
+        "R7-A-SAFT",
+        "R7-B-GLCI12",
+        "R7-C-GLCI-MULTI",
+        "R7-S2FT",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -41,3 +51,29 @@ class S2FTConfig:
             raise ValueError("max_offset_tokens must be positive")
         if self.decoder_channels <= 0 or self.structure_channels <= 0:
             raise ValueError("decoder and structure channels must be positive")
+
+
+def s2ft_config_for_variant(mechanism_id: str, base: S2FTConfig | None = None) -> S2FTConfig:
+    """Return the frozen predeclared architecture for one R7 development row."""
+
+    config = base or S2FTConfig()
+    if mechanism_id == "R7-A-SAFT":
+        selected = replace(config, interaction_layers=(), use_structural_refinement=False)
+    elif mechanism_id == "R7-B-GLCI12":
+        selected = replace(config, interaction_layers=(11,), use_structural_refinement=False)
+    elif mechanism_id == "R7-C-GLCI-MULTI":
+        selected = replace(
+            config,
+            interaction_layers=(3, 7, 11),
+            use_structural_refinement=False,
+        )
+    elif mechanism_id == "R7-S2FT":
+        selected = replace(
+            config,
+            interaction_layers=(3, 7, 11),
+            use_structural_refinement=True,
+        )
+    else:
+        raise ValueError(f"unknown R7-S2FT variant: {mechanism_id}")
+    selected.validate()
+    return selected
