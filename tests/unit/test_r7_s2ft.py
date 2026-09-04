@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import math
+from pathlib import Path
 
 import pytest
 import torch
+import yaml
 from torch import nn
 
 from rhs_rcmtr.mechanisms.geo_local_interaction import GeoLocalDeformableCrossInteraction
@@ -13,7 +15,11 @@ from rhs_rcmtr.mechanisms.structural_refinement import SarStructuralRefinement
 from rhs_rcmtr.models import ModelConfig, build_model
 from rhs_rcmtr.models.s2ft.patch_transplant import SarFoundationPatchEmbed
 from rhs_rcmtr.models.s2ft.sensor_adapter import SensorAdapter
-from rhs_rcmtr.utils.contracts import trainable_parameter_audit
+from rhs_rcmtr.utils.contracts import (
+    assert_training_object_parity,
+    matched_protocol_budget_hash,
+    trainable_parameter_audit,
+)
 from rhs_rcmtr.utils.initialization_anchor import reset_innovation_parameters
 
 
@@ -164,3 +170,18 @@ def test_s2ft_parameter_audit_separates_innovation() -> None:
     dino_keys = [key for key in model.state_dict() if ".foundation.dino." in key]
     assert dino_keys
     assert not any("source_patch_embed" in key for key in model.state_dict())
+
+
+def test_s2ft_candidate_keeps_parent_protocol_and_loss_graph() -> None:
+    root = Path(__file__).resolve().parents[2]
+    baseline = yaml.safe_load((root / "configs/experiment/r7/baseline.yaml").read_text(encoding="utf-8"))
+    candidate = yaml.safe_load((root / "configs/experiment/r7/r7_s2ft_full.yaml").read_text(encoding="utf-8"))
+    assert_training_object_parity(baseline, candidate)
+    assert matched_protocol_budget_hash(baseline) == matched_protocol_budget_hash(candidate)
+    assert baseline["loss"] == candidate["loss"]
+    assert baseline["loss_graph_signature"] == candidate["loss_graph_signature"]
+    differing = {
+        key for key in set(baseline) | set(candidate)
+        if baseline.get(key) != candidate.get(key)
+    }
+    assert differing == {"enabled_mechanism_ids"}
