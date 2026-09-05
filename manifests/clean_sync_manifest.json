@@ -3,7 +3,7 @@
   "schema_version": 1,
   "status": "pass",
   "code_root": ".",
-  "file_count": 94,
+  "file_count": 117,
   "files": [
     {
       "path": "configs/experiment/baseline.yaml",
@@ -54,6 +54,56 @@
       "path": "configs/experiment/r6/saronly_ablation.yaml",
       "bytes": 1693,
       "sha256": "d84e2a15ca92b4eecf55dde8a957256d39f4aac6cb6c6c6f99442b608b4ad8dd"
+    },
+    {
+      "path": "configs/experiment/r7/baseline.yaml",
+      "bytes": 1217,
+      "sha256": "f783147036491d8b5a8fd8f7d22803f42c978cd5590d26a6b37f5a009792d5fb"
+    },
+    {
+      "path": "configs/experiment/r7/baseline_rapid.yaml",
+      "bytes": 1410,
+      "sha256": "6d8f22dccef4f777ccdf412b60c1119cec4fa086d667297a6603c6ddb4495b1c"
+    },
+    {
+      "path": "configs/experiment/r7/r7_a_saft.yaml",
+      "bytes": 1221,
+      "sha256": "b1eac9f7d2c9b31ce4f837aa85b9e440802ee8dfd2233e11aeb31c07463fcf85"
+    },
+    {
+      "path": "configs/experiment/r7/r7_a_saft_rapid.yaml",
+      "bytes": 1376,
+      "sha256": "8287dfe77f0536d4f86c10286ea1eb44cf81f9c47d81685eaa4781d215e2ed03"
+    },
+    {
+      "path": "configs/experiment/r7/r7_b_glci12.yaml",
+      "bytes": 1204,
+      "sha256": "70bae74400aa6b0a12b51bee474ab9f6b3d6812a2b765bcad9c6d0a1ec1d4b01"
+    },
+    {
+      "path": "configs/experiment/r7/r7_b_glci12_rapid.yaml",
+      "bytes": 1359,
+      "sha256": "a25c9972800521da40d956143404e3e3effc4d381aabe43582ed55d7a57d08e9"
+    },
+    {
+      "path": "configs/experiment/r7/r7_c_glci_multi.yaml",
+      "bytes": 1204,
+      "sha256": "a14634960f712094b13570a9f5fe45d56e5ae9e104cb53eff3a858fc216b7a7e"
+    },
+    {
+      "path": "configs/experiment/r7/r7_c_glci_multi_rapid.yaml",
+      "bytes": 1359,
+      "sha256": "2b93975d728d2719902f15eb27f4a7bf53bf2b89ff7b677feeab701e4e94cbdf"
+    },
+    {
+      "path": "configs/experiment/r7/r7_s2ft_full.yaml",
+      "bytes": 1233,
+      "sha256": "4638277a4bddfbb92968b0eace20660c010adaed6f9b1600e6dc09a140f99358"
+    },
+    {
+      "path": "configs/experiment/r7/r7_s2ft_full_rapid.yaml",
+      "bytes": 1426,
+      "sha256": "cf3cb5e57453761a5f9220b8fc6c53215e56deb35d777b34c503aec6249868bb"
     },
     {
       "path": "configs/model/initialization.yaml",
@@ -124,6 +174,11 @@
       "path": "scripts/audit_q_permutation_detectability.py",
       "bytes": 6692,
       "sha256": "545acf3b028df49844183333b0b459e92668c69a578443a46eeb8ecc4c9b4a13"
+    },
+    {
+      "path": "scripts/audit_r7_optical_foundation_equivalence.py",
+      "bytes": 4064,
+      "sha256": "b852ba57c10d0cb26f954c76b10f4533ecf2c5f5ffcd71b61e9ba1b9d7f4e8ad"
     },
     {
       "path": "scripts/audit_reliability_proxies.py",
@@ -251,9 +306,19 @@
       "sha256": "cdd0d13cec1dca69826086ddccf215966c894942ddf5d5d9c486bb68c7b9fd4c"
     },
     {
+      "path": "src/rhs_rcmtr/mechanisms/geo_local_interaction.py",
+      "bytes": 7892,
+      "sha256": "27bc682ff4f1170136813c9b7318223a46728bd0254f41222af068cc11d90aab"
+    },
+    {
       "path": "src/rhs_rcmtr/mechanisms/reliability_router.py",
       "bytes": 4657,
       "sha256": "ded5876dcf8547a2c89dbf3b4def37442d56bc1b879ff06377c0db2cb3d79ebf"
+    },
+    {
+      "path": "src/rhs_rcmtr/mechanisms/structural_refinement.py",
+      "bytes": 2983,
+      "sha256": "c17e88ae5b5a9419d8e94bce9263131d12e9f2844c06219cca2e435017d3124c"
     },
     {
       "path": "src/rhs_rcmtr/metrics/__init__.py",
@@ -277,8 +342,43 @@
     },
     {
       "path": "src/rhs_rcmtr/models/factory.py",
-      "bytes": 11541,
-      "sha256": "79df32ad9d7d037549ed0c8144357557adfe06f1cb42904ad21d1fa037971ddf"
+      "bytes": 13777,
+      "sha256": "229b34a1af6e8dedd60cb868946bcd0a03183bb5d41fc0fbe99be416e11156ba"
+    },
+    {
+      "path": "src/rhs_rcmtr/models/s2ft/__init__.py",
+      "bytes": 575,
+      "sha256": "f41ffd4686d9522ec07f33974089863038c0b8f75d3e276749ac3c3f2704bf9d"
+    },
+    {
+      "path": "src/rhs_rcmtr/models/s2ft/config.py",
+      "bytes": 3103,
+      "sha256": "c34f9f069562862d63835307c342e66a6efb4d7c3df5fe40627c7730ffe96e98"
+    },
+    {
+      "path": "src/rhs_rcmtr/models/s2ft/decoder.py",
+      "bytes": 3519,
+      "sha256": "4c9a43349aacf6eb9ad876039e3270f4d6e02a28c02fdca32c89af3c71e42821"
+    },
+    {
+      "path": "src/rhs_rcmtr/models/s2ft/model.py",
+      "bytes": 5931,
+      "sha256": "5205a2b9bc9476c20ab58270133dcc6dc388566ca3297a5d6564a2f33dd9704b"
+    },
+    {
+      "path": "src/rhs_rcmtr/models/s2ft/patch_transplant.py",
+      "bytes": 3491,
+      "sha256": "4f94042d11bcbca6954ff3adef6b8ff6c903cd61a923e9514206de2e4a7b91f8"
+    },
+    {
+      "path": "src/rhs_rcmtr/models/s2ft/sensor_adapter.py",
+      "bytes": 1608,
+      "sha256": "5def3cfd0ace73eae0961686e45554091f1e659e467cd59079efd295fc239b83"
+    },
+    {
+      "path": "src/rhs_rcmtr/models/s2ft/shared_foundation.py",
+      "bytes": 12570,
+      "sha256": "3f6932e12a5767986f3bca22fccd4c994b95bbedf0d3bbb655ea51f18670cf66"
     },
     {
       "path": "src/rhs_rcmtr/utils/checkpoint.py",
@@ -292,8 +392,8 @@
     },
     {
       "path": "src/rhs_rcmtr/utils/contracts.py",
-      "bytes": 14065,
-      "sha256": "02ff86421775cd0e969ad8784062814b84b44b2953f362348dab03f113b3ecbd"
+      "bytes": 15305,
+      "sha256": "9b09e589e868cee4837e6ef9c4ec8c0f6700eb3f858ba0640f702d74dcb106a7"
     },
     {
       "path": "src/rhs_rcmtr/utils/data_order.py",
@@ -312,8 +412,8 @@
     },
     {
       "path": "src/rhs_rcmtr/utils/initialization_anchor.py",
-      "bytes": 7065,
-      "sha256": "a73af180ff7bb2c86a345287f0f4e653da50fa75328e5a0fff13e4192245a4a6"
+      "bytes": 7789,
+      "sha256": "382e0702b56e747b7de5f49f60c82ce0cbdc95e4d8fdb256844459921dd01a92"
     },
     {
       "path": "src/rhs_rcmtr/utils/interventions.py",
@@ -446,6 +546,21 @@
       "sha256": "c0b74744223adf41a6c66b249fbd523340833a0c869a0fc58fb8c11f0fdc54de"
     },
     {
+      "path": "tests/unit/test_r7_s2ft.py",
+      "bytes": 7435,
+      "sha256": "7668e7645b949babda0bcc7e7ae4ac77f1899637388ff8edf66a0c0d40e4f22a"
+    },
+    {
+      "path": "tests/unit/test_r7_s2ft_budget.py",
+      "bytes": 2184,
+      "sha256": "47cfa4e3ded33fef09a3198159135e4882d43bfa2c2d48410f0726c7df90e0be"
+    },
+    {
+      "path": "tests/unit/test_r7_s2ft_variants.py",
+      "bytes": 2268,
+      "sha256": "47f3ded4bc87b42f6f927118ef055d1193b556d05890bfb2eefcd21d81658305"
+    },
+    {
       "path": "tests/unit/test_reliability.py",
       "bytes": 1250,
       "sha256": "f5d8ed9ceb989a3b7678c13c1704d8946c3336335b1aa9a30d7755c1437e6c78"
@@ -481,6 +596,6 @@
   "credentials_included": false,
   "local_gpu_probe": "forbidden_not_run",
   "scan_policy": "allowlist_plus_secret_and_absolute_path_fail_closed",
-  "generated_at_utc": "2026-09-03T04:56:48.695224+00:00",
-  "note": "R6 snapshot (2026-09-03): G1 attribution ablation (saronly_ablation.yaml) added; audit CLIs fixed (bind/signature/tuple/cuda) after cloud-first-run failures."
+  "generated_at_utc": "2026-09-04T15:16:56.236761+00:00",
+  "note": "R7-S2FT mainline (2026-09-04): added ablation rapid variants (r7_a_saft/b_glci12/c_glci_multi _rapid) for matched 6-epoch rapid protocol."
 }

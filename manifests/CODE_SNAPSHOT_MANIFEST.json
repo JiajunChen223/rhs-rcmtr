@@ -10,7 +10,7 @@
     "smoke outputs -> 20_HISTORY/03_rejected_configs/smoke_outputs",
     ".pytest_cache/.ruff_cache -> 20_HISTORY/09_root_scraps/caches/code_caches"
   ],
-  "current_clean_sync_sha256": "860918aa44cb1d81885a3b3ce14a93760618856b437543c1f04fb1857cac3b7b",
+  "current_clean_sync_sha256": "cef46c3dad96f641e6dbe66b32af55cd1ac3c2df1fa7adf7fee7a8dfdd1cdc7c",
   "file_count_after_cleanup": 82,
   "note": "Config-level isolation only: rejected mechanism classes remain in src mechanism library for reproducibility; no accepted-route config references them.",
   "second_cleanup_20260902_external": {
@@ -52,5 +52,13 @@
     "clean_sync_manifest_sha256": "43919517b143d01bc85279cdb39d0a9963e0137d0791dd45a2e567dcd08bd944"
   },
   "audit_script_fix_20260903": "create_distill_pretrain_anchor + audit_sar_competence_v2: pretrained-audit injection and run-manifest signature fixed after cloud-first-run failures",
-  "ablation_20260903": "saronly_ablation.yaml added (no-KL control); audit CLIs finalized"
+  "ablation_20260903": "saronly_ablation.yaml added (no-KL control); audit CLIs finalized",
+  "r7_s2ft_mainline_20260903": {
+    "git": "main @ cdcbb11 (r7-s2ft-implementation merged, 34 commits ahead of R6 13c0782)",
+    "clean_sync_manifest_sha256": "953d410058c20ad0ae30fa8ea8a09cfcbdbc0bf555cb8314bcb4ff1728ca2f35",
+    "file_count": 112,
+    "pytest": "129 passed (108 R6 + 21 R7)",
+    "audit": "3-agent cross-audit: no scientific hard flaws; protocol fairness pass; cloud wiring complete (S2FTSegmenter via mechanism id); budget 4.5M pass; release gates: real-DINO optical equivalence audit (cloud), new R7 run manifests"
+  },
+  "r7_rapid_variants_20260904": "baseline_rapid/r7_s2ft_full_rapid added (execution 6, budget 12)"
 }
